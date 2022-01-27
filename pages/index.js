@@ -2,7 +2,7 @@ import { Box, Button, Text, TextField, Image } from '@skynexui/components';
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import appConfig from '../config.json';
-import Header from '../components/Header';
+import HeaderMenu from '../components/HeaderMenu';
 
 function Titulo(props) {
     const Tag = props.tag || 'h1';
@@ -20,7 +20,7 @@ function Titulo(props) {
     );
 }
 
-export default function PaginaInicial(props) {
+export default function PaginaInicial() {
 
     const [username, setUsername] = React.useState('FelippeLeme')
     const [githubAccount, setGithubAccount] = React.useState('')
@@ -38,15 +38,22 @@ export default function PaginaInicial(props) {
             })
             .then((resultado) => {
                 setGithubAccount(resultado)
+                sessionStorage.setItem('userName' , resultado.name)
+                sessionStorage.setItem('userIcon' , resultado.login)
             })
             .catch(err => {
                 console.log(err.message)
             })
     }, [username])
 
+    useEffect(() => {
+        sessionStorage.setItem('heroeTheme', heroe)
+    }, [heroe])
+
+
     return (
         <>
-            <Header heroe={ heroe } toogle={ setHeroe } />
+            <HeaderMenu heroe={ heroe } toogle={ setHeroe } />
             <Box
                 styleSheet={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',

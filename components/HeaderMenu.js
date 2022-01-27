@@ -1,4 +1,4 @@
-export default function Header(props) {
+export default function HeaderMenu(props) {
     return (
         <header
         style={{

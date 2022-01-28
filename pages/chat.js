@@ -1,7 +1,9 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React, { useState, useEffect } from 'react';
 import appConfig from '../config.json';
-import { useRouter } from 'next/router';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 export default function ChatPage() {
     
@@ -11,23 +13,44 @@ export default function ChatPage() {
     const [icon, setIcon] = useState(null)
     const [name, setName] = useState('Loading...')
 
+    useEffect(() => {
+        supabaseClient
+          .from('mensagens')
+          .select('*')
+          .order('id', { ascending: false })
+          .then(({ data }) => {
+            console.log('Dados da consulta:', data);
+            setMessageList(data);
+          });
+      }, []);
+
     useEffect(() => setTheme(sessionStorage.heroeTheme), [])
     useEffect(() => setIcon(sessionStorage.userIcon), [])
     useEffect(() => setName(sessionStorage.userName), [])
-    
-    function handleNewMessage(newMessage) {
-        const message = {
-            id: messageList.length,
-            from: name,
-            text: newMessage
-        }
 
-        setMessageList([
-            message,
-            ...messageList
-        ])
-        setMessage('')
-    }
+    function handleNewMessage(newMessage) {
+        const mensagem = {
+          // id: listaDeMensagens.length + 1,
+          de: name,
+          texto: newMessage,
+        };
+    
+        supabaseClient
+          .from('mensagens')
+          .insert([
+            // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+            mensagem
+          ])
+          .then(({ data }) => {
+            console.log('Criando mensagem: ', data);
+            setMessageList([
+              data[0],
+              ...messageList,
+            ]);
+          });
+    
+        setMessage('');
+      }
 
     return (
         <Box
@@ -177,7 +200,7 @@ function MessageList(props) {
                                 src={`https://github.com/${props.user}.png`}
                             />
                             <Text tag="strong">
-                                {msg.from}
+                                {msg.de}
                             </Text>
                             <Text
                                 styleSheet={{
@@ -199,7 +222,7 @@ function MessageList(props) {
                                 }}
                             />
                         </Box>
-                        {msg.text}
+                        {msg.texto}
                     </Text>
                 )
             })}

@@ -36,8 +36,8 @@ export default function PaginaInicial() {
                 }
                 return res.json()
             })
-            .then((resultado) => {
-                setGithubAccount(resultado)
+            .then(async (resultado) => {
+                await setGithubAccount(resultado)
                 sessionStorage.setItem('userName' , resultado.name)
                 sessionStorage.setItem('userIcon' , resultado.login)
             })

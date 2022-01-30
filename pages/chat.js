@@ -2,11 +2,21 @@ import { Box, Text, TextField, Image, Button } from '@skynexui/components';
 import React, { useState, useEffect } from 'react';
 import appConfig from '../config.json';
 import { createClient } from '@supabase/supabase-js';
+import { ButtonSendSticker } from '../components/ButtonSendSticker';
 
 const supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+    return supabaseClient
+        .from('mensagens')
+        .on('INSERT', (respostaLive) => {
+            adicionaMensagem(respostaLive.new);
+        })
+        .subscribe();
+}
+
 export default function ChatPage() {
-    
+
     const [message, setMessage] = React.useState('')
     const [messageList, setMessageList] = React.useState([])
     const [theme, setTheme] = useState('marvel')
@@ -15,14 +25,28 @@ export default function ChatPage() {
 
     useEffect(() => {
         supabaseClient
-          .from('mensagens')
-          .select('*')
-          .order('id', { ascending: false })
-          .then(({ data }) => {
-            console.log('Dados da consulta:', data);
-            setMessageList(data);
-          });
-      }, []);
+            .from('mensagens')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(({ data }) => {
+                console.log('Dados da consulta:', data);
+                setMessageList(data);
+            });
+
+        const subscription = escutaMensagensEmTempoReal((novaMensagem) => {
+            setMessageList((valorAtualDaLista) => {
+                console.log('valorAtualDaLista:', valorAtualDaLista);
+                return [
+                    novaMensagem,
+                    ...valorAtualDaLista,
+                ]
+            });
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        }
+    }, []);
 
     useEffect(() => setTheme(sessionStorage.heroeTheme), [])
     useEffect(() => setIcon(sessionStorage.userIcon), [])
@@ -30,27 +54,23 @@ export default function ChatPage() {
 
     function handleNewMessage(newMessage) {
         const mensagem = {
-          // id: listaDeMensagens.length + 1,
-          de: name,
-          texto: newMessage,
+            // id: listaDeMensagens.length + 1,
+            de: name,
+            texto: newMessage,
+            icon: icon
         };
-    
+
         supabaseClient
-          .from('mensagens')
-          .insert([
-            // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
-            mensagem
-          ])
-          .then(({ data }) => {
-            console.log('Criando mensagem: ', data);
-            setMessageList([
-              data[0],
-              ...messageList,
-            ]);
-          });
-    
+            .from('mensagens')
+            .insert([
+                // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+                mensagem
+            ])
+            .then(({ data }) => {
+                console.log('Criando mensagem: ', data);
+            });
         setMessage('');
-      }
+    }
 
     return (
         <Box
@@ -90,7 +110,7 @@ export default function ChatPage() {
                     }}
                 >
 
-                    <MessageList messages={messageList} user={ icon } setMessageList = { setMessageList } />
+                    <MessageList messages={messageList} user={icon} setMessageList={setMessageList} />
 
                     <Box
                         as="form"
@@ -121,6 +141,12 @@ export default function ChatPage() {
                                 backgroundColor: appConfig.theme.colors.neutrals[800],
                                 marginRight: '12px',
                                 color: appConfig.theme.colors.neutrals[200],
+                            }}
+                        />
+                        <ButtonSendSticker
+                            onStickerClick={(sticker) => {
+                                // console.log('[USANDO O COMPONENTE] Salva esse sticker no banco', sticker);
+                                handleNewMessage(':sticker: ' + sticker);
                             }}
                         />
                     </Box>
@@ -197,7 +223,7 @@ function MessageList(props) {
                                     display: 'inline-block',
                                     marginRight: '8px',
                                 }}
-                                src={`https://github.com/${props.user}.png`}
+                                src={`https://github.com/${msg.icon}.png`}
                             />
                             <Text tag="strong">
                                 {msg.de}
@@ -222,7 +248,24 @@ function MessageList(props) {
                                 }}
                             />
                         </Box>
-                        {msg.texto}
+                        {/* [Declarativo] */}
+                        {/* Condicional: {mensagem.texto.startsWith(':sticker:').toString()} */}
+                        {msg.texto.startsWith(':sticker:')
+                            ? (
+                                <Image
+                                styleSheet={{
+                                    maxWidth: '150px'
+                                }}
+                                src={msg.texto.replace(':sticker:', '')} />
+                            )
+                            : (
+                                msg.texto
+                            )}
+                        {/* if mensagem de texto possui stickers:
+                           mostra a imagem
+                        else 
+                           mensagem.texto */}
+                        {/* {mensagem.texto} */}
                     </Text>
                 )
             })}
